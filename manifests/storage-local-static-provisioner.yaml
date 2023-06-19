@@ -49,8 +49,8 @@ data:
   useNodeNameOnly: "true"
   storageClassMap: |
     local-storage:
-       hostDir: /pv-disks
-       mountDir: /pv-disks
+       hostDir: /pv-disks/disks
+       mountDir: /pv-disks/disks
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -100,7 +100,7 @@ spec:
               readOnly: true
             - mountPath: /dev
               name: provisioner-dev
-            - mountPath: /pv-disks
+            - mountPath: /pv-disks/disks
               name: local-storage
               mountPropagation: "HostToContainer"
       volumes:
@@ -112,7 +112,7 @@ spec:
             path: /dev
         - name: local-storage
           hostPath:
-            path: /pv-disks
+            path: /pv-disks/disks
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass

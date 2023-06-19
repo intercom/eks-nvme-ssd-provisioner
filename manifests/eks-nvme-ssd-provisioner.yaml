@@ -20,7 +20,7 @@ spec:
       priorityClassName: system-node-critical
       containers:
       - name: eks-nvme-ssd-provisioner
-        image: eu.gcr.io/brunsgaard-public/eks-nvme-ssd-provisioner:v1.0.0
+        image: 508711860910.dkr.ecr.eu-west-1.amazonaws.com/eks-nvme:latest
         imagePullPolicy: Always
         securityContext:
           privileged: true
