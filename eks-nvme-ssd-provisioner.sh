@@ -8,22 +8,19 @@ mapfile -t SSD_NVME_DEVICE_LIST < <(nvme list | grep "Amazon EC2 NVMe Instance S
 SSD_NVME_DEVICE_COUNT=${#SSD_NVME_DEVICE_LIST[@]}
 RAID_DEVICE=${RAID_DEVICE:-/dev/md0}
 RAID_CHUNK_SIZE=${RAID_CHUNK_SIZE:-512}  # Kilo Bytes
-FILESYSTEM_BLOCK_SIZE=${FILESYSTEM_BLOCK_SIZE:-4096}  # Bytes
-STRIDE=$((RAID_CHUNK_SIZE * 1024 / FILESYSTEM_BLOCK_SIZE))
-STRIPE_WIDTH=$((SSD_NVME_DEVICE_COUNT * STRIDE))
 
-# Checking if provisioning already happend
+# Checking if provisioning already happened
 if [[ "$(ls -A /pv-disks/disks)" ]]
 then
   echo 'Volumes already present in "/pv-disks/disks"'
   echo -e "\n$(ls -Al /pv-disks/disks | tail -n +2)\n"
-  echo "I assume that provisioning already happend, trying to assemble and mount!"
+  echo "I assume that provisioning already happened, trying to assemble and mount!"
   case $SSD_NVME_DEVICE_COUNT in
   "0")
     exit 1
     ;;
   "1")
-    echo "no need to assable a raid"
+    echo "no need to assemble a raid"
     DEVICE="${SSD_NVME_DEVICE_LIST[0]}"
     ;;
   *)
@@ -38,7 +35,7 @@ then
   if mount | grep "$DEVICE" > /dev/null; then
     echo "device $DEVICE appears to be mounted already"
   else
-    mount -o defaults,noatime,discard,nobarrier --uuid "$UUID" "/pv-disks/disks/$UUID"
+    mount -o defaults,noatime --uuid "$UUID" "/pv-disks/disks/$UUID"
   fi
   ln -s "/pv-disks/disks/$UUID" /nvme/disk || true
   echo "Device $DEVICE has been mounted to /pv-disks/disks/$UUID"
@@ -53,7 +50,7 @@ case $SSD_NVME_DEVICE_COUNT in
   exit 1
   ;;
 "1")
-  mkfs.ext4 -m 0 -b "$FILESYSTEM_BLOCK_SIZE" "${SSD_NVME_DEVICE_LIST[0]}"
+  mkfs -t xfs -f -L ES_DRIVE "${SSD_NVME_DEVICE_LIST[0]}"
   DEVICE="${SSD_NVME_DEVICE_LIST[0]}"
   ;;
 *)
@@ -64,14 +61,14 @@ case $SSD_NVME_DEVICE_COUNT in
     sleep 1
   done
   echo "Raid0 device $RAID_DEVICE has been created with disks ${SSD_NVME_DEVICE_LIST[*]}"
-  mkfs.ext4 -m 0 -b "$FILESYSTEM_BLOCK_SIZE" -E "stride=$STRIDE,stripe-width=$STRIPE_WIDTH" "$RAID_DEVICE"
+  mkfs -t xfs -f -L ES_DRIVE "$RAID_DEVICE"
   DEVICE=$RAID_DEVICE
   ;;
 esac
 
 UUID=$(blkid -s UUID -o value "$DEVICE")
 mkdir -p "/pv-disks/disks/$UUID"
-mount -o defaults,noatime,discard,nobarrier --uuid "$UUID" "/pv-disks/disks/$UUID"
+mount -o defaults,noatime --uuid "$UUID" "/pv-disks/disks/$UUID"
 ln -s "/pv-disks/disks/$UUID" /nvme/disk
 echo "Device $DEVICE has been mounted to /pv-disks/disks/$UUID"
 echo "NVMe SSD provisioning is done and I will go to sleep now"
